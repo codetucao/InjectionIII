@@ -25,6 +25,7 @@ class AppDelegate : NSObject, NSApplicationDelegate {
     @IBOutlet weak var windowItem: NSMenuItem!
     @IBOutlet weak var remoteItem: NSMenuItem!
     @IBOutlet weak var frontItem: NSMenuItem!
+    @IBOutlet weak var helpItem: NSMenuItem!
     @IBOutlet var statusItem: NSStatusItem!
 
     var watchedDirectories = Set<String>()
@@ -65,6 +66,8 @@ class AppDelegate : NSObject, NSApplicationDelegate {
         if let lastWatched = defaults.string(forKey: lastWatched) {
             _ = self.application(NSApp, openFile: lastWatched)
         }
+        
+        customSetup()
     }
 
     func application(_ theApplication: NSApplication, openFile filename: String) -> Bool {
@@ -78,7 +81,7 @@ class AppDelegate : NSObject, NSApplicationDelegate {
                 open.directoryURL = URL(fileURLWithPath: filename)
             }
             open.canChooseDirectories = true
-            open.canChooseFiles = false
+            open.canChooseFiles = true
             // open.showsHiddenFiles = TRUE;
             if open.runModal() == .OK {
                 url = open.url!
@@ -87,13 +90,14 @@ class AppDelegate : NSObject, NSApplicationDelegate {
                 return false
             }
         }
-
+        
         if let fileList = try? FileManager.default
             .contentsOfDirectory(atPath: url.path),
             let projectFile =
                 fileWithExtension("xcworkspace", inFiles: fileList) ??
                 fileWithExtension("xcodeproj", inFiles: fileList) ??
                 fileList.first(where: {$0 == "Package.swift"}) {
+            
             self.selectedProject = url
                 .appendingPathComponent(projectFile).path
             self.watchedDirectories.removeAll()
@@ -101,6 +105,25 @@ class AppDelegate : NSObject, NSApplicationDelegate {
             self.lastConnection?.setProject(self.selectedProject!)
             NSDocumentController.shared.noteNewRecentDocumentURL(url)
             defaults.set(url.path, forKey: lastWatched)
+            return true
+            
+        } else if ( ((url.path as NSString).pathExtension == "xcworkspace") ||
+                    ((url.path as NSString).pathExtension == "xcodeproj") ) {
+            
+            var _temp = url.pathComponents
+            _temp.removeLast()
+            if (_temp.first == "/") {
+                _temp.removeFirst()
+            }
+            let _path = "/\(_temp.joined(separator: "/"))"
+            guard let folderUrl = URL(string: _path) else { return false }
+            
+            self.selectedProject = url.path
+            self.watchedDirectories.removeAll()
+            self.watchedDirectories.insert(folderUrl.path)
+            self.lastConnection?.setProject(self.selectedProject!)
+            NSDocumentController.shared.noteNewRecentDocumentURL(folderUrl)
+            defaults.set(folderUrl.path, forKey: lastWatched)
             return true
         }
 
@@ -280,5 +303,16 @@ class AppDelegate : NSObject, NSApplicationDelegate {
         DDHotKeyCenter.shared()
             .unregisterHotKey(withKeyCode: UInt16(kVK_ANSI_Equal),
              modifierFlags: NSEvent.ModifierFlags.control.rawValue)
+    }
+    
+    /// Disable some not necessary
+    private func customSetup() {
+        frontItem.isHidden = true
+        enabledTDDItem.isHidden = true
+        enableVaccineItem.isHidden = true
+        traceItem.isHidden = true
+        remoteItem.isHidden = true
+        helpItem.isHidden = true
+        xprobeItem.isHidden = true
     }
 }
