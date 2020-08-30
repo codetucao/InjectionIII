@@ -91,24 +91,8 @@ class AppDelegate : NSObject, NSApplicationDelegate {
             }
         }
         
-        if let fileList = try? FileManager.default
-            .contentsOfDirectory(atPath: url.path),
-            let projectFile =
-                fileWithExtension("xcworkspace", inFiles: fileList) ??
-                fileWithExtension("xcodeproj", inFiles: fileList) ??
-                fileList.first(where: {$0 == "Package.swift"}) {
-            
-            self.selectedProject = url
-                .appendingPathComponent(projectFile).path
-            self.watchedDirectories.removeAll()
-            self.watchedDirectories.insert(url.path)
-            self.lastConnection?.setProject(self.selectedProject!)
-            NSDocumentController.shared.noteNewRecentDocumentURL(url)
-            defaults.set(url.path, forKey: lastWatched)
-            return true
-            
-        } else if ( ((url.path as NSString).pathExtension == "xcworkspace") ||
-                    ((url.path as NSString).pathExtension == "xcodeproj") ) {
+        if (((url.path as NSString).pathExtension == "xcworkspace") ||
+            ((url.path as NSString).pathExtension == "xcodeproj")) {
             
             var _temp = url.pathComponents
             _temp.removeLast()
@@ -125,6 +109,23 @@ class AppDelegate : NSObject, NSApplicationDelegate {
             NSDocumentController.shared.noteNewRecentDocumentURL(folderUrl)
             defaults.set(folderUrl.path, forKey: lastWatched)
             return true
+            
+        } else if let fileList = try? FileManager.default
+            .contentsOfDirectory(atPath: url.path),
+            let projectFile =
+                fileWithExtension("xcworkspace", inFiles: fileList) ??
+                fileWithExtension("xcodeproj", inFiles: fileList) ??
+                fileList.first(where: {$0 == "Package.swift"}) {
+            
+            self.selectedProject = url
+                .appendingPathComponent(projectFile).path
+            self.watchedDirectories.removeAll()
+            self.watchedDirectories.insert(url.path)
+            self.lastConnection?.setProject(self.selectedProject!)
+            NSDocumentController.shared.noteNewRecentDocumentURL(url)
+            defaults.set(url.path, forKey: lastWatched)
+            return true
+            
         }
 
         let alert: NSAlert = NSAlert()
